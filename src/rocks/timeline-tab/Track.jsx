@@ -1,29 +1,77 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
+import { useDrag, useDrop } from 'react-dnd';
 import { useTheme } from '../workspace/ThemeContext';
 import { useTimelineSelection } from './TimelineSelectionContext';
 import { useContextMenu } from './TimelineContextMenu';
+import { useKeyframeEditor } from './KeyframeEditor';
 import { formatShortcut, shortcuts } from './TimelineShortcuts';
 import Keyframe from './Keyframe';
+import KeyframeEditor from './KeyframeEditor';
 import styles from './Timeline.module.css';
+
+const TRACK_DND_TYPE = 'track';
 
 const Track = ({
   track,
+  index,
   timeRange,
   pxPerMs,
   onKeyframeUpdate,
   onKeyframeDelete,
   onTrackVisibilityChange,
   onTrackLockChange,
+  onTrackMove,
 }) => {
   const theme = useTheme();
+  const trackRef = useRef(null);
   const [isVisible, setIsVisible] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
   const { selectedTracks, selectedKeyframes, toggleTrack, toggleKeyframe } = useTimelineSelection();
   const { showContextMenu } = useContextMenu();
+  const { editor, showEditor, hideEditor } = useKeyframeEditor();
 
   const isSelected = selectedTracks.has(track.id);
+
+  // Setup drag and drop for track reordering
+  const [{ isDragging }, drag] = useDrag({
+    type: TRACK_DND_TYPE,
+    item: () => ({ id: track.id, index, name: track.name }),
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    canDrag: () => !isLocked,
+  });
+
+  const [{ isOver }, drop] = useDrop({
+    accept: TRACK_DND_TYPE,
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+    hover(item, monitor) {
+      if (!trackRef.current) return;
+      
+      const dragIndex = item.index;
+      const hoverIndex = index;
+
+      if (dragIndex === hoverIndex) return;
+
+      const hoverBoundingRect = trackRef.current.getBoundingClientRect();
+      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+      const clientOffset = monitor.getClientOffset();
+      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+
+      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+      onTrackMove(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  // Connect drag and drop refs
+  drag(drop(trackRef));
 
   // Filter visible keyframes for performance
   const visibleKeyframes = useMemo(() => {
@@ -104,16 +152,31 @@ const Track = ({
     showContextMenu(event, items);
   }, [isLocked, onKeyframeDelete, showContextMenu]);
 
+  // Handle keyframe double click for editing
+  const handleKeyframeDoubleClick = useCallback((event, keyframe) => {
+    if (isLocked) return;
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    showEditor(keyframe, {
+      x: rect.left + rect.width / 2,
+      y: rect.top,
+    });
+  }, [isLocked, showEditor]);
+
   return (
     <div
+      ref={trackRef}
       className={classNames(styles.track, {
         [styles.selected]: isSelected,
         [styles.locked]: isLocked,
+        [styles.dragging]: isDragging,
+        [styles.dropTarget]: isOver,
       })}
       onClick={(e) => toggleTrack(track.id, e)}
       onContextMenu={handleTrackContextMenu}
       style={{
         '--track-color': theme.color(isSelected ? 'primary' : 'border'),
+        opacity: isDragging ? 0.5 : 1,
       }}
     >
       <div className={styles.trackHeader}>
@@ -157,16 +220,22 @@ const Track = ({
             timeRange={timeRange}
             isSelected={selectedKeyframes.has(keyframe.id)}
             onClick={(e) => toggleKeyframe(keyframe.id, e)}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              // Implement keyframe value editing
-            }}
+            onDoubleClick={(e) => handleKeyframeDoubleClick(e, keyframe)}
             onContextMenu={(e) => handleKeyframeContextMenu(e, keyframe)}
             onDrag={handleKeyframeDrag}
             onDelete={() => onKeyframeDelete?.(keyframe.id)}
           />
         ))}
       </div>
+
+      {editor && editor.keyframe && (
+        <KeyframeEditor
+          keyframe={editor.keyframe}
+          position={editor.position}
+          onUpdate={onKeyframeUpdate}
+          onClose={hideEditor}
+        />
+      )}
     </div>
   );
 };
@@ -181,6 +250,7 @@ Track.propTypes = {
       value: PropTypes.any.isRequired,
     })).isRequired,
   }).isRequired,
+  index: PropTypes.number.isRequired,
   timeRange: PropTypes.shape({
     start: PropTypes.number.isRequired,
     end: PropTypes.number.isRequired,
@@ -191,6 +261,7 @@ Track.propTypes = {
   onKeyframeDelete: PropTypes.func,
   onTrackVisibilityChange: PropTypes.func,
   onTrackLockChange: PropTypes.func,
+  onTrackMove: PropTypes.func,
 };
 
 export default React.memo(Track);

@@ -1,10 +1,13 @@
-import React, { useCallback, useState, useMemo } from 'react';
+import React, { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { TimelineSelectionProvider } from './TimelineSelectionContext';
+import { TimelineHistoryProvider } from './TimelineHistory';
+import { TimelineClipboardProvider } from './TimelineClipboard';
 import { useTimelineShortcuts } from './TimelineShortcuts';
 import TimelineContextMenu from './TimelineContextMenu';
+import TrackDragLayer from './TrackDragLayer';
 import Track from './Track';
 import styles from './Timeline.module.css';
 import classNames from 'classnames';
@@ -20,6 +23,7 @@ const TimelineContent = ({
   onKeyframeDelete,
   onTrackVisibilityChange,
   onTrackLockChange,
+  onTrackMove,
   onCopy,
   onCut,
   onPaste,
@@ -34,11 +38,11 @@ const TimelineContent = ({
   const [contextMenu, setContextMenu] = useState(null);
 
   // Calculate visible time range for optimization
-  const timeRange = useMemo(() => ({
+  const timeRange = {
     start: visibleTimeStart,
     end: visibleTimeEnd,
     duration: visibleTimeEnd - visibleTimeStart,
-  }), [visibleTimeStart, visibleTimeEnd]);
+  };
 
   // Setup keyboard shortcuts
   useTimelineShortcuts({
@@ -66,6 +70,11 @@ const TimelineContent = ({
     onTrackSelect?.(trackId);
   }, [pxPerMs, visibleTimeStart, onKeyframeAdd, onTrackSelect]);
 
+  // Handle track move
+  const handleTrackMove = useCallback((dragIndex, hoverIndex) => {
+    onTrackMove?.(dragIndex, hoverIndex);
+  }, [onTrackMove]);
+
   // Handle track drag
   const handleTrackDragStart = useCallback((event) => {
     event.preventDefault();
@@ -84,67 +93,74 @@ const TimelineContent = ({
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <TimelineSelectionProvider>
-        <div 
-          className={classNames(styles.content, styles.timelineContent)}
-          onMouseDown={handleTrackDragStart}
-          onMouseMove={handleTrackDragMove}
-          onMouseUp={handleTrackDragEnd}
-          onMouseLeave={handleTrackDragEnd}
-          style={{
-            '--track-height': theme.spacing(4),
-            '--track-padding': theme.spacing(1),
-          }}
-        >
-          <div className={styles.tracksContainer}>
-            {tracks.map((track) => (
-              <Track
-                key={track.id}
-                track={track}
-                timeRange={timeRange}
-                pxPerMs={pxPerMs}
-                isSelected={selectedTrack === track.id}
-                onClick={(event) => handleTrackClick(track.id, event)}
-                onKeyframeUpdate={(keyframeId, updates) => 
-                  onKeyframeUpdate?.(track.id, keyframeId, updates)
-                }
-                onKeyframeDelete={(keyframeId) => 
-                  onKeyframeDelete?.(track.id, keyframeId)
-                }
-                onTrackVisibilityChange={onTrackVisibilityChange}
-                onTrackLockChange={onTrackLockChange}
+      <TimelineHistoryProvider initialTimeline={{ tracks }}>
+        <TimelineClipboardProvider>
+          <TimelineSelectionProvider>
+            <div 
+              className={classNames(styles.content, styles.timelineContent)}
+              onMouseDown={handleTrackDragStart}
+              onMouseMove={handleTrackDragMove}
+              onMouseUp={handleTrackDragEnd}
+              onMouseLeave={handleTrackDragEnd}
+              style={{
+                '--track-height': theme.spacing(4),
+                '--track-padding': theme.spacing(1),
+              }}
+            >
+              <div className={styles.tracksContainer}>
+                {tracks.map((track, index) => (
+                  <Track
+                    key={track.id}
+                    track={track}
+                    index={index}
+                    timeRange={timeRange}
+                    pxPerMs={pxPerMs}
+                    isSelected={selectedTrack === track.id}
+                    onClick={(event) => handleTrackClick(track.id, event)}
+                    onKeyframeUpdate={(keyframeId, updates) => 
+                      onKeyframeUpdate?.(track.id, keyframeId, updates)
+                    }
+                    onKeyframeDelete={(keyframeId) => 
+                      onKeyframeDelete?.(track.id, keyframeId)
+                    }
+                    onTrackVisibilityChange={onTrackVisibilityChange}
+                    onTrackLockChange={onTrackLockChange}
+                    onTrackMove={handleTrackMove}
+                  />
+                ))}
+              </div>
+
+              {/* Current time indicator line */}
+              <div 
+                className={styles.currentTimeLine}
+                style={{
+                  left: `${(0 - visibleTimeStart) * pxPerMs}px`,
+                }}
               />
-            ))}
-          </div>
 
-          {/* Current time indicator line */}
-          <div 
-            className={styles.currentTimeLine}
-            style={{
-              left: `${(0 - visibleTimeStart) * pxPerMs}px`,
-            }}
-          />
-
-          {/* Empty state */}
-          {tracks.length === 0 && (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyStateIcon}>timeline</div>
-              <h3 className={styles.emptyStateTitle}>No Tracks</h3>
-              <p className={styles.emptyStateText}>
-                Add tracks to start creating animations
-              </p>
+              {/* Empty state */}
+              {tracks.length === 0 && (
+                <div className={styles.emptyState}>
+                  <div className={styles.emptyStateIcon}>timeline</div>
+                  <h3 className={styles.emptyStateTitle}>No Tracks</h3>
+                  <p className={styles.emptyStateText}>
+                    Add tracks to start creating animations
+                  </p>
+                </div>
+              )}
+              {contextMenu && (
+                <TimelineContextMenu
+                  x={contextMenu.x}
+                  y={contextMenu.y}
+                  items={contextMenu.items}
+                  onClose={handleContextMenuClose}
+                />
+              )}
+              <TrackDragLayer />
             </div>
-          )}
-          {contextMenu && (
-            <TimelineContextMenu
-              x={contextMenu.x}
-              y={contextMenu.y}
-              items={contextMenu.items}
-              onClose={handleContextMenuClose}
-            />
-          )}
-        </div>
-      </TimelineSelectionProvider>
+          </TimelineSelectionProvider>
+        </TimelineClipboardProvider>
+      </TimelineHistoryProvider>
     </DndProvider>
   );
 };
@@ -166,6 +182,7 @@ TimelineContent.propTypes = {
   onKeyframeDelete: PropTypes.func,
   onTrackVisibilityChange: PropTypes.func,
   onTrackLockChange: PropTypes.func,
+  onTrackMove: PropTypes.func,
   onCopy: PropTypes.func,
   onCut: PropTypes.func,
   onPaste: PropTypes.func,
