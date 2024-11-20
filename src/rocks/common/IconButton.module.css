@@ -1,0 +1,117 @@
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--spacing-unit) * 0.5);
+  border: none;
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-duration) var(--transition-timing);
+  gap: calc(var(--spacing-unit) * 0.5);
+  min-width: var(--icon-size);
+  min-height: var(--icon-size);
+}
+
+.iconButton:hover {
+  background-color: var(--hover-color);
+}
+
+.iconButton:active {
+  background-color: var(--active-color);
+}
+
+.iconButton:disabled {
+  color: var(--disabled-color);
+  cursor: not-allowed;
+}
+
+.iconButton:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.iconButton:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+/* Size variants */
+.small {
+  font-size: var(--font-size-sm);
+}
+
+.medium {
+  font-size: var(--font-size-md);
+}
+
+.large {
+  font-size: var(--font-size-lg);
+}
+
+/* Color variants */
+.primary {
+  color: var(--color-primary);
+}
+
+.primary:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.primary:active {
+  background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.secondary {
+  color: var(--color-secondary);
+}
+
+.secondary:hover {
+  background-color: color-mix(in srgb, var(--color-secondary) 10%, transparent);
+}
+
+.secondary:active {
+  background-color: color-mix(in srgb, var(--color-secondary) 20%, transparent);
+}
+
+.danger {
+  color: var(--color-error);
+}
+
+.danger:hover {
+  background-color: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+
+.danger:active {
+  background-color: color-mix(in srgb, var(--color-error) 20%, transparent);
+}
+
+/* Icon styles */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  font-family: 'Material Icons';
+  font-size: calc(var(--icon-size) * 0.75);
+  line-height: 1;
+  font-weight: normal;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga';
+}
+
+/* Label styles */
+.label {
+  font-size: inherit;
+  line-height: 1;
+  font-weight: 500;
+}

@@ -104,6 +104,70 @@
   gap: var(--spacing-unit);
 }
 
+/* Header-specific styles */
+.headerLeft,
+.headerCenter,
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-unit);
+}
+
+.headerLeft {
+  margin-right: auto;
+}
+
+.headerCenter {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.headerRight {
+  margin-left: auto;
+}
+
+.timeDisplay {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing-unit) * 0.5);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+}
+
+.timeLabel {
+  color: var(--color-text-secondary);
+}
+
+.timeValue {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.timeSeparator {
+  color: var(--color-text-secondary);
+  margin: 0 calc(var(--spacing-unit) * 0.5);
+}
+
+.playbackInfo {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing-unit) * 0.5);
+  font-size: var(--font-size-sm);
+  padding: calc(var(--spacing-unit) * 0.25) calc(var(--spacing-unit) * 0.5);
+  background-color: var(--color-primary);
+  color: white;
+  border-radius: var(--border-radius);
+}
+
+.playbackLabel {
+  opacity: 0.8;
+}
+
+.playbackValue {
+  font-weight: 500;
+}
+
 /* Ruler styles */
 .ruler {
   height: var(--timeline-ruler-height);
