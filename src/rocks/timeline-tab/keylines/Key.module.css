@@ -1,0 +1,14 @@
+.key {
+  transition: fill 0.2s ease-out, stroke 0.2s ease-out;
+}
+
+.keyCircle {
+  composes: key;
+  fill-opacity: 0.8;
+}
+
+.keyLine {
+  composes: key;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}

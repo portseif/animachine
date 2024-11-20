@@ -1,44 +1,37 @@
-import React, { PropTypes } from 'react'
-import {afflatus} from 'afflatus'
-import {convertTimeToPosition} from '../utils'
+import React, { memo } from 'react';
+import PropTypes from 'prop-types';
+import { useTimelineState } from '../hooks/useTimelineState';
+import { useEase } from '../hooks/useEase';
+import styles from './Ease.module.css';
 
-@afflatus
-export default class Ease extends React.Component {
-  render () {
-    const {ease, height, colors} = this.props
-    const easer = ease.easer
-    const timeline = ease.parent('Timeline')
-    const keyTimes = ease.parent('Param').keyTimes
-    const endTime = ease.parent('Key').time
-    if (endTime === keyTimes[0]) {//it has no previous key
-      return <g hidden/>
-    }
-    const startTime = keyTimes[keyTimes.indexOf(endTime) - 1]
-    const startPosition = timeline.pxpms * startTime
-    const endPosition = timeline.pxpms * endTime
-    const width = endPosition - startPosition
+const Ease = ({ ease, height, colors }) => {
+  const timeline = useTimelineState();
+  const { isHidden, points } = useEase(ease, timeline, height);
 
-    if (width === 0) {
-      return <g hidden/>
-    }
-
-    let points = ''
-    for (let i = 0; i < width; ++i) {
-      const x = startPosition + i
-      const y = height - height * easer.getRatio(i/width)
-      points += `${x},${y} `
-    }
-
-    const style = {
-      fill: 'none',
-      stroke: colors.ease,
-      strokeWidth: 1.2
-    }
-
-    return (
-      <polyline
-        points = {points}
-        style = {style}/>
-    )
+  if (isHidden) {
+    return <g className={styles.hidden} />;
   }
-}
+
+  return (
+    <polyline
+      className={styles.ease}
+      points={points}
+      stroke={colors.ease}
+    />
+  );
+};
+
+Ease.propTypes = {
+  ease: PropTypes.shape({
+    easer: PropTypes.shape({
+      getRatio: PropTypes.func.isRequired,
+    }).isRequired,
+    parent: PropTypes.func.isRequired,
+  }).isRequired,
+  height: PropTypes.number.isRequired,
+  colors: PropTypes.shape({
+    ease: PropTypes.string.isRequired,
+  }).isRequired,
+};
+
+export default memo(Ease);

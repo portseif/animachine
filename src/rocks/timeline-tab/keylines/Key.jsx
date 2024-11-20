@@ -1,37 +1,50 @@
-import React, { PropTypes } from 'react'
-import {afflatus} from 'afflatus'
-import {convertTimeToPosition} from '../utils'
+import React, { memo } from 'react';
+import PropTypes from 'prop-types';
+import { useTimelineState } from '../hooks/useTimelineState';
+import { useKey } from '../hooks/useKey';
+import styles from './Key.module.css';
 
-@afflatus
-export default class Key extends React.Component {
-  render () {
-    const {_key: key, height, colors, isGroup} = this.props
-    const r = 2
-    const position =
-      parseInt(key.parent('Timeline').pxpms * key.time) + 0.5
+const Key = ({ _key: key, height, colors, isGroup }) => {
+  const timeline = useTimelineState();
+  const { position, color } = useKey(key, timeline);
+  const selectedColor = colors[color];
 
-    if (isNaN(position)) debugger
-
-    if (isGroup) {
-      return (
-        <circle
-          fill = {key.selected ? colors.selected : colors.normal}
-          cx = {position}
-          cy = {height / 2}
-          r = {r}
-        />
-      )
-    }
-    else {
-      return (
-        <line
-          x1 = {position}
-          y1 = {0}
-          x2 = {position}
-          y2 = {height}
-          stroke = {key.selected ? colors.selected : colors.normal}
-          strokeWidth='1'/>
-      )
-    }
+  if (isGroup) {
+    return (
+      <circle
+        className={styles.keyCircle}
+        fill={selectedColor}
+        cx={position}
+        cy={height / 2}
+        r={2}
+      />
+    );
   }
-}
+
+  return (
+    <line
+      className={styles.keyLine}
+      x1={position}
+      y1={0}
+      x2={position}
+      y2={height}
+      stroke={selectedColor}
+    />
+  );
+};
+
+Key.propTypes = {
+  _key: PropTypes.shape({
+    time: PropTypes.number.isRequired,
+    selected: PropTypes.bool.isRequired,
+    parent: PropTypes.func.isRequired,
+  }).isRequired,
+  height: PropTypes.number.isRequired,
+  colors: PropTypes.shape({
+    selected: PropTypes.string.isRequired,
+    normal: PropTypes.string.isRequired,
+  }).isRequired,
+  isGroup: PropTypes.bool,
+};
+
+export default memo(Key);

@@ -1,0 +1,10 @@
+.ease {
+  fill: none;
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.2s ease-out;
+}
+
+.hidden {
+  display: none;
+}
