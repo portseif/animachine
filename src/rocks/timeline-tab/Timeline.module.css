@@ -6,19 +6,24 @@
   outline: 0;
   pointer-events: auto;
   overflow: hidden;
+  border-radius: var(--border-radius-medium);
+  box-shadow: var(--shadow-1);
 }
 
 .timeline-content {
   display: flex;
   flex-direction: column;
   position: relative;
+  background-color: var(--background-color);
 }
 
 .timeline-head {
   display: flex;
   position: relative;
   z-index: 2;
-  border-bottom: 1px solid var(--secondary-color);
+  border-bottom: 1px solid var(--divider-color);
+  padding: var(--spacing-small);
+  background-color: var(--surface-color);
 }
 
 .timeline-body {
@@ -28,6 +33,7 @@
   bottom: 0;
   left: 0;
   right: 0;
+  background-color: var(--background-color);
 }
 
 .left-panel {
@@ -35,6 +41,7 @@
   height: 100%;
   overflow: hidden;
   background-color: var(--surface-color);
+  border-right: 1px solid var(--divider-color);
 }
 
 .right-panel {
@@ -43,6 +50,7 @@
   bottom: 0;
   right: 0;
   overflow: auto;
+  background-color: var(--background-color);
 }
 
 .divider {
@@ -54,10 +62,11 @@
   cursor: col-resize;
   z-index: 3;
   opacity: 0.5;
-  transition: opacity 0.2s;
+  transition: opacity var(--animation-duration-short) var(--animation-easing-default);
 }
 
 .divider:hover,
 .divider:active {
   opacity: 1;
+  background-color: var(--primary-color);
 }

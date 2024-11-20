@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDrag } from 'react-dnd';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { useTheme } from '../workspace/ThemeContext';
 import BETON from '../../core/Beton';
 import Controls from './controls/Controls';
 import Keylines from './keylines/Keylines';
@@ -14,42 +15,53 @@ import styles from './Timeline.module.css';
 const INITIAL_STATE = {
   dividerPos: 300,
   fullWidth: 2000,
-  scrollPosition: 0
+  scrollPosition: 0,
 };
 
-export function Timeline({ timeline, headHeight = 21 }) {
+const Timeline = ({ timeline, headHeight = 21 }) => {
+  const theme = useTheme();
   const [state, setState] = useState(INITIAL_STATE);
-  const containerRef = useRef(null);
+  const timelineRef = useRef(null);
+  const isDraggingDivider = useRef(false);
 
-  const updateSize = () => {
-    if (!containerRef.current) return;
+  const handleDividerDrag = useCallback((e) => {
+    if (!isDraggingDivider.current) return;
 
-    const { width: nodeWidth } = containerRef.current.getBoundingClientRect();
-    const { dividerPos, fullWidth } = state;
-    const { state: pmState, actions } = BETON.get('project-manager');
-    const currentTimeline = pmState.currentTimeline;
-
-    if (nodeWidth !== fullWidth) {
-      setState(prev => ({ ...prev, fullWidth: nodeWidth }));
-    }
-
-    const timelineWidth = nodeWidth - dividerPos;
-    if (currentTimeline && currentTimeline.width !== timelineWidth) {
-      actions.set(currentTimeline, 'width', timelineWidth);
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener('resize', updateSize);
-    const interval = setInterval(updateSize, 300);
-
-    return () => {
-      window.removeEventListener('resize', updateSize);
-      clearInterval(interval);
-    };
+    const newDividerPos = Math.max(200, Math.min(e.clientX, window.innerWidth - 200));
+    setState(prev => ({ ...prev, dividerPos: newDividerPos }));
   }, []);
 
-  // Hotkey handlers
+  const handleDividerMouseDown = useCallback(() => {
+    isDraggingDivider.current = true;
+    document.body.style.cursor = 'col-resize';
+  }, []);
+
+  const handleDividerMouseUp = useCallback(() => {
+    isDraggingDivider.current = false;
+    document.body.style.cursor = '';
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', handleDividerDrag);
+    window.addEventListener('mouseup', handleDividerMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleDividerDrag);
+      window.removeEventListener('mouseup', handleDividerMouseUp);
+    };
+  }, [handleDividerDrag, handleDividerMouseUp]);
+
+  // Keyboard shortcuts
+  useHotkeys('space', (e) => {
+    e.preventDefault();
+    BETON.require('project-manager').togglePlayback();
+  });
+
+  useHotkeys('shift+space', (e) => {
+    e.preventDefault();
+    BETON.require('project-manager').playFromStart();
+  });
+
   useHotkeys('backspace,del', (event) => {
     if (event.target.tagName !== 'INPUT') {
       BETON.get('project-manager').actions.deleteSelectedKeys();
@@ -90,30 +102,40 @@ export function Timeline({ timeline, headHeight = 21 }) {
   const { dividerPos, scrollPosition, fullWidth } = state;
 
   return (
-    <div ref={containerRef} className={styles['timeline-container']}>
+    <div className={styles['timeline-container']} ref={timelineRef}>
       <div className={styles['timeline-content']}>
         <div className={styles['timeline-head']} style={{ height: headHeight }}>
           <Toolbar />
         </div>
         <div className={styles['timeline-body']} style={{ top: headHeight }}>
-          <div className={styles['left-panel']} style={{ width: dividerPos }}>
+          <div 
+            className={styles['left-panel']} 
+            style={{ width: state.dividerPos }}
+          >
             <Controls />
           </div>
-          <div ref={dragRef} className={styles.divider}>
-            <DividerLine />
-          </div>
-          <div className={styles['right-panel']} style={{ left: dividerPos }}>
+          <div 
+            className={styles.divider}
+            style={{ left: state.dividerPos }}
+            onMouseDown={handleDividerMouseDown}
+          />
+          <div 
+            className={styles['right-panel']}
+            style={{ left: state.dividerPos + 4 }}
+          >
             <Timebar />
             <Keylines scrollPosition={scrollPosition} />
+            <InlineEaseEditor />
           </div>
         </div>
-        <InlineEaseEditor />
       </div>
     </div>
   );
-}
+};
 
 Timeline.propTypes = {
   timeline: PropTypes.object,
   headHeight: PropTypes.number
 };
+
+export default Timeline;
