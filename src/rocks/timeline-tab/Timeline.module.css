@@ -2,11 +2,11 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  background-color: var(--surface-color);
+  background-color: var(--color-background);
   outline: 0;
   pointer-events: auto;
   overflow: hidden;
-  border-radius: var(--border-radius-medium);
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow-1);
 }
 
@@ -14,16 +14,16 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  background-color: var(--background-color);
+  background-color: var(--color-background);
 }
 
 .timeline-head {
   display: flex;
   position: relative;
   z-index: 2;
-  border-bottom: 1px solid var(--divider-color);
-  padding: var(--spacing-small);
-  background-color: var(--surface-color);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-unit);
+  background-color: var(--color-surface);
 }
 
 .timeline-body {
@@ -33,15 +33,15 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: var(--background-color);
+  background-color: var(--color-background);
 }
 
 .left-panel {
   position: relative;
   height: 100%;
   overflow: hidden;
-  background-color: var(--surface-color);
-  border-right: 1px solid var(--divider-color);
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
 }
 
 .right-panel {
@@ -50,7 +50,7 @@
   bottom: 0;
   right: 0;
   overflow: auto;
-  background-color: var(--background-color);
+  background-color: var(--color-background);
 }
 
 .divider {
@@ -58,7 +58,7 @@
   top: 0;
   bottom: 0;
   width: 4px;
-  background-color: var(--secondary-color);
+  background-color: var(--color-secondary);
   cursor: col-resize;
   z-index: 3;
   opacity: 0.5;
@@ -68,5 +68,170 @@
 .divider:hover,
 .divider:active {
   opacity: 1;
-  background-color: var(--primary-color);
+  background-color: var(--color-primary);
+}
+
+.timeline {
+  position: relative;
+  width: 100%;
+  height: var(--timeline-height);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  user-select: none;
+}
+
+.timeline.dragging * {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Header styles */
+.header {
+  height: var(--timeline-header-height);
+  padding: 0 var(--spacing-unit);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerControls {
+  display: flex;
+  gap: var(--spacing-unit);
+}
+
+/* Ruler styles */
+.ruler {
+  height: var(--timeline-ruler-height);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.rulerMarks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  pointer-events: none;
+}
+
+.rulerMark {
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 50%;
+  background-color: var(--color-border);
+}
+
+.rulerMark.major {
+  height: 100%;
+}
+
+.rulerLabel {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+/* Content styles */
+.content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.track {
+  height: var(--timeline-track-height);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-unit);
+  cursor: pointer;
+  transition: background-color var(--transition-duration) var(--transition-timing);
+}
+
+.track:hover {
+  background-color: var(--color-hover);
+}
+
+.track.selected {
+  background-color: var(--color-selected-bg);
+}
+
+.trackName {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Controls styles */
+.controls {
+  height: 48px;
+  padding: 0 var(--spacing-unit);
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-unit);
+}
+
+.controlButton {
+  padding: calc(var(--spacing-unit) * 0.5);
+  border-radius: var(--border-radius);
+  background: transparent;
+  border: none;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all var(--transition-duration) var(--transition-timing);
+}
+
+.controlButton:hover {
+  background-color: var(--color-hover);
+}
+
+.controlButton:active {
+  background-color: var(--color-selected-bg);
+}
+
+.controlButton:disabled {
+  color: var(--color-disabled);
+  cursor: not-allowed;
+}
+
+/* Playhead styles */
+.playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: var(--color-primary);
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.playheadHandle {
+  position: absolute;
+  top: -6px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-primary);
+  border-radius: 50%;
+  cursor: grab;
+}
+
+.playheadHandle:active {
+  cursor: grabbing;
 }

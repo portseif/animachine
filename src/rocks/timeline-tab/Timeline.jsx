@@ -1,141 +1,168 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import { useDrag } from 'react-dnd';
-import { useHotkeys } from 'react-hotkeys-hook';
+import classNames from 'classnames';
 import { useTheme } from '../workspace/ThemeContext';
-import BETON from '../../core/Beton';
-import Controls from './controls/Controls';
-import Keylines from './keylines/Keylines';
-import Timebar from './timebar/Timebar';
-import Toolbar from './toolbar/Toolbar';
-import DividerLine from './DividerLine';
-import InlineEaseEditor from './inline-ease-editor/InlineEaseEditor';
+import { TimelineProvider } from './TimelineContext';
+import { useTimelineControls } from './hooks/useTimelineControls';
+import { useTimelineZoom } from './hooks/useTimelineZoom';
+import { useTimelineDrag } from './hooks/useTimelineDrag';
+import TimelineHeader from './TimelineHeader';
+import TimelineRuler from './TimelineRuler';
+import TimelineContent from './TimelineContent';
+import TimelineControls from './TimelineControls';
 import styles from './Timeline.module.css';
 
-const INITIAL_STATE = {
-  dividerPos: 300,
-  fullWidth: 2000,
-  scrollPosition: 0,
-};
-
-const Timeline = ({ timeline, headHeight = 21 }) => {
+const Timeline = ({ 
+  tracks, 
+  currentTime, 
+  duration, 
+  onTimeChange, 
+  onTrackSelect,
+  onKeyframeAdd,
+  onKeyframeUpdate,
+  onKeyframeDelete 
+}) => {
   const theme = useTheme();
-  const [state, setState] = useState(INITIAL_STATE);
-  const timelineRef = useRef(null);
-  const isDraggingDivider = useRef(false);
+  const [selectedTrack, setSelectedTrack] = useState(null);
+  
+  // Timeline state management
+  const {
+    isPlaying,
+    playbackSpeed,
+    togglePlay,
+    setSpeed,
+    jumpToTime,
+  } = useTimelineControls({ currentTime, duration, onTimeChange });
 
-  const handleDividerDrag = useCallback((e) => {
-    if (!isDraggingDivider.current) return;
+  const {
+    zoom,
+    pxPerMs,
+    visibleTimeStart,
+    visibleTimeEnd,
+    handleZoomIn,
+    handleZoomOut,
+    handleZoomReset,
+  } = useTimelineZoom({ duration });
 
-    const newDividerPos = Math.max(200, Math.min(e.clientX, window.innerWidth - 200));
-    setState(prev => ({ ...prev, dividerPos: newDividerPos }));
-  }, []);
+  const {
+    isDragging,
+    dragStartPos,
+    handleDragStart,
+    handleDragMove,
+    handleDragEnd,
+  } = useTimelineDrag();
 
-  const handleDividerMouseDown = useCallback(() => {
-    isDraggingDivider.current = true;
-    document.body.style.cursor = 'col-resize';
-  }, []);
+  // Memoized timeline context value
+  const timelineContext = useMemo(() => ({
+    currentTime,
+    duration,
+    zoom,
+    pxPerMs,
+    visibleTimeStart,
+    visibleTimeEnd,
+    isPlaying,
+    playbackSpeed,
+    selectedTrack,
+    tracks,
+  }), [
+    currentTime,
+    duration,
+    zoom,
+    pxPerMs,
+    visibleTimeStart,
+    visibleTimeEnd,
+    isPlaying,
+    playbackSpeed,
+    selectedTrack,
+    tracks,
+  ]);
 
-  const handleDividerMouseUp = useCallback(() => {
-    isDraggingDivider.current = false;
-    document.body.style.cursor = '';
-  }, []);
+  // Event handlers
+  const handleTrackSelect = useCallback((trackId) => {
+    setSelectedTrack(trackId);
+    onTrackSelect?.(trackId);
+  }, [onTrackSelect]);
 
-  useEffect(() => {
-    window.addEventListener('mousemove', handleDividerDrag);
-    window.addEventListener('mouseup', handleDividerMouseUp);
+  const handleKeyframeAdd = useCallback((trackId, time, value) => {
+    onKeyframeAdd?.(trackId, time, value);
+  }, [onKeyframeAdd]);
 
-    return () => {
-      window.removeEventListener('mousemove', handleDividerDrag);
-      window.removeEventListener('mouseup', handleDividerMouseUp);
-    };
-  }, [handleDividerDrag, handleDividerMouseUp]);
+  const handleKeyframeUpdate = useCallback((trackId, keyframeId, updates) => {
+    onKeyframeUpdate?.(trackId, keyframeId, updates);
+  }, [onKeyframeUpdate]);
 
-  // Keyboard shortcuts
-  useHotkeys('space', (e) => {
-    e.preventDefault();
-    BETON.require('project-manager').togglePlayback();
-  });
-
-  useHotkeys('shift+space', (e) => {
-    e.preventDefault();
-    BETON.require('project-manager').playFromStart();
-  });
-
-  useHotkeys('backspace,del', (event) => {
-    if (event.target.tagName !== 'INPUT') {
-      BETON.get('project-manager').actions.deleteSelectedKeys();
-    }
-  });
-
-  useHotkeys('ctrl+z,cmd+z', (event) => {
-    if (event.target.tagName !== 'INPUT') {
-      BETON.get('project-manager').actions.undo();
-    }
-  });
-
-  useHotkeys('ctrl+shift+z,cmd+shift+z', (event) => {
-    if (event.target.tagName !== 'INPUT') {
-      BETON.get('project-manager').actions.redo();
-    }
-  });
-
-  const handleScroll = (scroll) => {
-    setState(prev => ({ ...prev, scrollPosition: scroll }));
-  };
-
-  const [, dragRef] = useDrag({
-    type: 'divider',
-    item: { type: 'divider' },
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-    end: (item, monitor) => {
-      const offset = monitor.getDifferenceFromInitialOffset().x;
-      setState(prev => ({
-        ...prev,
-        dividerPos: Math.max(100, Math.min(prev.dividerPos + offset, prev.fullWidth - 100))
-      }));
-    },
-  });
-
-  const { dividerPos, scrollPosition, fullWidth } = state;
+  const handleKeyframeDelete = useCallback((trackId, keyframeId) => {
+    onKeyframeDelete?.(trackId, keyframeId);
+  }, [onKeyframeDelete]);
 
   return (
-    <div className={styles['timeline-container']} ref={timelineRef}>
-      <div className={styles['timeline-content']}>
-        <div className={styles['timeline-head']} style={{ height: headHeight }}>
-          <Toolbar />
-        </div>
-        <div className={styles['timeline-body']} style={{ top: headHeight }}>
-          <div 
-            className={styles['left-panel']} 
-            style={{ width: state.dividerPos }}
-          >
-            <Controls />
-          </div>
-          <div 
-            className={styles.divider}
-            style={{ left: state.dividerPos }}
-            onMouseDown={handleDividerMouseDown}
-          />
-          <div 
-            className={styles['right-panel']}
-            style={{ left: state.dividerPos + 4 }}
-          >
-            <Timebar />
-            <Keylines scrollPosition={scrollPosition} />
-            <InlineEaseEditor />
-          </div>
-        </div>
+    <TimelineProvider value={timelineContext}>
+      <div 
+        className={classNames(styles.timeline, {
+          [styles.dragging]: isDragging,
+        })}
+        style={{
+          '--timeline-height': '300px',
+          '--timeline-header-height': '40px',
+          '--timeline-ruler-height': '24px',
+          '--timeline-track-height': '32px',
+          ...theme.getTimelineStyles(),
+        }}
+      >
+        <TimelineHeader
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+        />
+        
+        <TimelineRuler
+          visibleTimeStart={visibleTimeStart}
+          visibleTimeEnd={visibleTimeEnd}
+          pxPerMs={pxPerMs}
+        />
+        
+        <TimelineContent
+          tracks={tracks}
+          selectedTrack={selectedTrack}
+          onTrackSelect={handleTrackSelect}
+          onKeyframeAdd={handleKeyframeAdd}
+          onKeyframeUpdate={handleKeyframeUpdate}
+          onKeyframeDelete={handleKeyframeDelete}
+          onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
+          onDragEnd={handleDragEnd}
+          dragStartPos={dragStartPos}
+        />
+        
+        <TimelineControls
+          isPlaying={isPlaying}
+          playbackSpeed={playbackSpeed}
+          onPlayPause={togglePlay}
+          onSpeedChange={setSpeed}
+          onTimeJump={jumpToTime}
+        />
       </div>
-    </div>
+    </TimelineProvider>
   );
 };
 
 Timeline.propTypes = {
-  timeline: PropTypes.object,
-  headHeight: PropTypes.number
+  tracks: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    keyframes: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      time: PropTypes.number.isRequired,
+      value: PropTypes.any.isRequired,
+    })).isRequired,
+  })).isRequired,
+  currentTime: PropTypes.number.isRequired,
+  duration: PropTypes.number.isRequired,
+  onTimeChange: PropTypes.func.isRequired,
+  onTrackSelect: PropTypes.func,
+  onKeyframeAdd: PropTypes.func,
+  onKeyframeUpdate: PropTypes.func,
+  onKeyframeDelete: PropTypes.func,
 };
 
-export default Timeline;
+export default React.memo(Timeline);
