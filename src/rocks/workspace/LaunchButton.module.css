@@ -1,0 +1,27 @@
+.launchButton {
+  pointer-events: auto;
+  position: absolute;
+  padding: var(--spacing-medium);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  border-radius: var(--border-radius-medium);
+  box-shadow: var(--shadow-2);
+  transition: all var(--animation-duration-short) var(--animation-easing-default);
+}
+
+.launchButton:hover {
+  background-color: var(--surface-color-hover);
+  box-shadow: var(--shadow-3);
+  transform: translateY(-2px);
+}
+
+.launchButton:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-1);
+}
+
+.icon {
+  color: var(--primary-color);
+  font-size: var(--font-size-large);
+  margin-right: var(--spacing-small);
+}
