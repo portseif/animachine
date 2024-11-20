@@ -1,32 +1,33 @@
-import React from 'react'
-import renderControls from './renderControls'
-import {ContextMenu, Button, Label} from 'react-matterkit'
-import {afflatus} from 'afflatus'
+import React from 'react';
+import { Button } from '@mui/material';
+import styles from './Controls.module.css';
+import { useTimeline } from '../../../hooks/useTimeline';
+import { TrackList } from './TrackList';
 
-@afflatus
-export default class Controls extends React.Component {
-  renderPlaceholder() {
-    return <div>
-      <Label
-        style={{marginLeft: 4}}
-        label='Hi, there is no track to animate yet!'
-      />
-      <br/>
-      <Button
-        label = 'Create a new one!'
-        mod = {{kind: 'colored'}}
-        onClick = {() => {
-          const {timeline} = this.props
-          timeline.addTrack({name: 'new track'})
-        }}
-      />
-    </div>
+export function Controls() {
+  const { timeline, addTrack } = useTimeline();
+
+  const handleCreateTrack = () => {
+    addTrack({ name: 'New Track' });
+  };
+
+  if (!timeline?.tracks?.length) {
+    return (
+      <div className={styles.placeholder}>
+        <p className={styles.message}>
+          Hi, there is no track to animate yet!
+        </p>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleCreateTrack}
+          className={styles.button}
+        >
+          Create a new one!
+        </Button>
+      </div>
+    );
   }
 
-  render() {
-    const {timeline} = this.props
-    return timeline.tracks.getLength() === 0
-      ? this.renderPlaceholder()
-      : renderControls(timeline.tracks)
-  }
+  return <TrackList tracks={timeline.tracks} />;
 }
