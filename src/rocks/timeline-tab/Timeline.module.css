@@ -432,3 +432,65 @@
 .playheadHandle:active {
   cursor: grabbing;
 }
+
+/* Context Menu styles */
+.contextMenu {
+  position: fixed;
+  min-width: 180px;
+  padding: var(--spacing-xs) 0;
+  background-color: var(--menu-background);
+  border: 1px solid var(--menu-border);
+  border-radius: var(--border-radius-sm);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  user-select: none;
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.contextMenuItem:hover:not(:disabled) {
+  background-color: var(--color-background-hover);
+}
+
+.contextMenuItem:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.contextMenuIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: var(--spacing-sm);
+  color: var(--color-text-secondary);
+}
+
+.contextMenuLabel {
+  flex: 1;
+}
+
+.contextMenuShortcut {
+  margin-left: var(--spacing-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.contextMenuSeparator {
+  height: 1px;
+  margin: var(--spacing-xs) 0;
+  background-color: var(--color-border);
+}

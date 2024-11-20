@@ -1,10 +1,15 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { TimelineSelectionProvider } from './TimelineSelectionContext';
+import { useTimelineShortcuts } from './TimelineShortcuts';
+import TimelineContextMenu from './TimelineContextMenu';
+import Track from './Track';
+import styles from './Timeline.module.css';
 import classNames from 'classnames';
 import { useTheme } from '../workspace/ThemeContext';
 import { useTimelineState } from './TimelineContext';
-import Track from './Track';
-import styles from './Timeline.module.css';
 
 const TimelineContent = ({
   tracks,
@@ -13,12 +18,20 @@ const TimelineContent = ({
   onKeyframeAdd,
   onKeyframeUpdate,
   onKeyframeDelete,
+  onTrackVisibilityChange,
+  onTrackLockChange,
+  onCopy,
+  onCut,
+  onPaste,
+  onUndo,
+  onRedo,
   onDragStart,
   onDragMove,
   onDragEnd,
 }) => {
   const theme = useTheme();
   const { pxPerMs, visibleTimeStart, visibleTimeEnd } = useTimelineState();
+  const [contextMenu, setContextMenu] = useState(null);
 
   // Calculate visible time range for optimization
   const timeRange = useMemo(() => ({
@@ -26,6 +39,21 @@ const TimelineContent = ({
     end: visibleTimeEnd,
     duration: visibleTimeEnd - visibleTimeStart,
   }), [visibleTimeStart, visibleTimeEnd]);
+
+  // Setup keyboard shortcuts
+  useTimelineShortcuts({
+    onCopy,
+    onCut,
+    onPaste,
+    onUndo,
+    onRedo,
+    onDeleteKeyframe: onKeyframeDelete,
+  });
+
+  // Handle context menu close
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   // Handle track click
   const handleTrackClick = useCallback((trackId, event) => {
@@ -55,55 +83,69 @@ const TimelineContent = ({
   }, [onDragEnd]);
 
   return (
-    <div 
-      className={styles.content}
-      onMouseDown={handleTrackDragStart}
-      onMouseMove={handleTrackDragMove}
-      onMouseUp={handleTrackDragEnd}
-      onMouseLeave={handleTrackDragEnd}
-      style={{
-        '--track-height': theme.spacing(4),
-        '--track-padding': theme.spacing(1),
-      }}
-    >
-      <div className={styles.tracksContainer}>
-        {tracks.map((track) => (
-          <Track
-            key={track.id}
-            track={track}
-            isSelected={selectedTrack === track.id}
-            timeRange={timeRange}
-            pxPerMs={pxPerMs}
-            onClick={(event) => handleTrackClick(track.id, event)}
-            onKeyframeUpdate={(keyframeId, updates) => 
-              onKeyframeUpdate?.(track.id, keyframeId, updates)
-            }
-            onKeyframeDelete={(keyframeId) => 
-              onKeyframeDelete?.(track.id, keyframeId)
-            }
+    <DndProvider backend={HTML5Backend}>
+      <TimelineSelectionProvider>
+        <div 
+          className={classNames(styles.content, styles.timelineContent)}
+          onMouseDown={handleTrackDragStart}
+          onMouseMove={handleTrackDragMove}
+          onMouseUp={handleTrackDragEnd}
+          onMouseLeave={handleTrackDragEnd}
+          style={{
+            '--track-height': theme.spacing(4),
+            '--track-padding': theme.spacing(1),
+          }}
+        >
+          <div className={styles.tracksContainer}>
+            {tracks.map((track) => (
+              <Track
+                key={track.id}
+                track={track}
+                timeRange={timeRange}
+                pxPerMs={pxPerMs}
+                isSelected={selectedTrack === track.id}
+                onClick={(event) => handleTrackClick(track.id, event)}
+                onKeyframeUpdate={(keyframeId, updates) => 
+                  onKeyframeUpdate?.(track.id, keyframeId, updates)
+                }
+                onKeyframeDelete={(keyframeId) => 
+                  onKeyframeDelete?.(track.id, keyframeId)
+                }
+                onTrackVisibilityChange={onTrackVisibilityChange}
+                onTrackLockChange={onTrackLockChange}
+              />
+            ))}
+          </div>
+
+          {/* Current time indicator line */}
+          <div 
+            className={styles.currentTimeLine}
+            style={{
+              left: `${(0 - visibleTimeStart) * pxPerMs}px`,
+            }}
           />
-        ))}
-      </div>
 
-      {/* Current time indicator line */}
-      <div 
-        className={styles.currentTimeLine}
-        style={{
-          left: `${(0 - visibleTimeStart) * pxPerMs}px`,
-        }}
-      />
-
-      {/* Empty state */}
-      {tracks.length === 0 && (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyStateIcon}>timeline</div>
-          <h3 className={styles.emptyStateTitle}>No Tracks</h3>
-          <p className={styles.emptyStateText}>
-            Add tracks to start creating animations
-          </p>
+          {/* Empty state */}
+          {tracks.length === 0 && (
+            <div className={styles.emptyState}>
+              <div className={styles.emptyStateIcon}>timeline</div>
+              <h3 className={styles.emptyStateTitle}>No Tracks</h3>
+              <p className={styles.emptyStateText}>
+                Add tracks to start creating animations
+              </p>
+            </div>
+          )}
+          {contextMenu && (
+            <TimelineContextMenu
+              x={contextMenu.x}
+              y={contextMenu.y}
+              items={contextMenu.items}
+              onClose={handleContextMenuClose}
+            />
+          )}
         </div>
-      )}
-    </div>
+      </TimelineSelectionProvider>
+    </DndProvider>
   );
 };
 
@@ -122,6 +164,13 @@ TimelineContent.propTypes = {
   onKeyframeAdd: PropTypes.func,
   onKeyframeUpdate: PropTypes.func,
   onKeyframeDelete: PropTypes.func,
+  onTrackVisibilityChange: PropTypes.func,
+  onTrackLockChange: PropTypes.func,
+  onCopy: PropTypes.func,
+  onCut: PropTypes.func,
+  onPaste: PropTypes.func,
+  onUndo: PropTypes.func,
+  onRedo: PropTypes.func,
   onDragStart: PropTypes.func,
   onDragMove: PropTypes.func,
   onDragEnd: PropTypes.func,
