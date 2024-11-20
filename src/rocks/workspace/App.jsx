@@ -1,27 +1,23 @@
-import React from 'react'
-import {Spaceman} from 'spaceman'
-import matterkitTheme from './matterkitTheme'
-import LaunchButton from './LaunchButton'
-import state from './state'
-import HTML5Backend from 'react-dnd/modules/backends/HTML5'
-import {DragDropContext} from 'react-dnd'
-import {afflatus} from 'afflatus'
+import React from 'react';
+import { Spaceman } from 'spaceman';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { useAfflatus } from 'afflatus';
+import matterkitTheme from './matterkitTheme';
+import LaunchButton from './LaunchButton';
+import state from './state';
+import { ThemeContext } from './ThemeContext';
 
-@DragDropContext(HTML5Backend)
-@afflatus
-export default class App extends React.Component{
-  static childContextTypes = {
-    matterkitTheme: React.PropTypes.object
-  }
+const App = () => {
+  const workspace = useAfflatus();
 
-  getChildContext() {
-    return {matterkitTheme}
-  }
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <ThemeContext.Provider value={matterkitTheme}>
+        {state.collapsed ? <LaunchButton /> : <Spaceman store={workspace} />}
+      </ThemeContext.Provider>
+    </DndProvider>
+  );
+};
 
-  render() {
-    const {workspace} = this.props
-    return state.collapsed
-      ? <LaunchButton/>
-      : <Spaceman store={workspace}/>
-  }
-}
+export default App;

@@ -1,43 +1,45 @@
-import React from 'react'
-import customDrag from 'custom-drag'
-import {Button} from 'react-matterkit'
-import state from './state'
-import * as actions from './actions'
-import {afflatus} from 'afflatus'
+import React from 'react';
+import { useDrag } from 'react-dnd';
+import { Button } from 'react-matterkit';
+import { useAfflatus } from 'afflatus';
+import state from './state';
+import * as actions from './actions';
 
-const dragOptions = {
-  onDown(props, monitor) {
-    monitor.setData({
-      initX: props.x,
-      initY: props.y,
-    })
-  },
-  onDrag(props, monitor) {
-    const {x, y} = monitor.getDifferenceFromInitialOffset()
-    actions.move({
-      x: monitor.data.initX + x,
-      y: monitor.data.initY + y,
-    })
-  },
-  onClick(props) {
-    actions.uncollapse()
-  }
-}
-@customDrag(dragOptions, connect => ({
-  dragRef: connect.getDragRef()
-}))
-@afflatus
-export default class LaunchButton extends React.Component {
-  render() {
-    const {launchButtonX: x, launchButtonY: y} = state
-    const {dragRef} = this.props
-    return <Button
-      ref = {dragRef}
-      tooltip = 'show animachine or drag this button away'
-      label = 'animachine'
-      style = {{
+const LaunchButton = () => {
+  const { launchButtonX: x, launchButtonY: y } = state;
+  useAfflatus();
+
+  const [, dragRef] = useDrag({
+    type: 'LAUNCH_BUTTON',
+    item: { type: 'LAUNCH_BUTTON', x, y },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+    end: (item, monitor) => {
+      const { x: deltaX, y: deltaY } = monitor.getDifferenceFromInitialOffset() || { x: 0, y: 0 };
+      actions.move({
+        x: item.x + deltaX,
+        y: item.y + deltaY,
+      });
+    },
+  });
+
+  const handleClick = () => {
+    actions.uncollapse();
+  };
+
+  return (
+    <Button
+      ref={dragRef}
+      tooltip="show animachine or drag this button away"
+      label="animachine"
+      onClick={handleClick}
+      style={{
         pointerEvents: 'auto',
-        transform: `translate(${x}px, ${y}px)`
-      }}/>
-  }
-}
+        transform: `translate(${x}px, ${y}px)`,
+      }}
+    />
+  );
+};
+
+export default LaunchButton;

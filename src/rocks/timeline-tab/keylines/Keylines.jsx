@@ -1,48 +1,39 @@
-import React from 'react'
-import {afflatus} from 'afflatus'
-import Keyline from './Keyline'
-import PointerLine from './PointerLine'
-import {convertTimeToPosition, getVisibleTime} from '../utils'
-import {ContextMenu} from 'react-matterkit'
-import union from 'lodash/union'
+import React, { memo } from 'react';
+import PropTypes from 'prop-types';
+import { ContextMenu } from 'react-matterkit';
+import { useTimelineState } from '../hooks/useTimelineState';
+import { useKeylines } from '../hooks/useKeylines';
+import Keyline from './Keyline';
+import PointerLine from './PointerLine';
+import styles from './Keylines.module.css';
 
-@afflatus
-export default class Keylines extends React.Component {
-  render() {
-    const {timeline, actions, style} = this.props
-    const height = BETON.require('config').size
-    const children = []
-    let pos = 0
+const Keylines = ({ style }) => {
+  const timeline = useTimelineState();
+  const { getMenuItems, calculateKeylinePositions } = useKeylines(timeline);
+  const keylinePositions = calculateKeylinePositions(timeline.tracks);
 
-    const renderKeyline = (keyHolder) => {
-      children.push(<Keyline
-        key = {keyHolder.uid}
-        keyHolder = {keyHolder}
-        actions = {actions}
-        top = {pos}
-        height = {height}/>)
-
-      pos += height
-    }
-
-    timeline.tracks.forEach(track => {
-      renderKeyline(track)
-      if (track.openInTimeline) {
-        track.params.forEach(param => renderKeyline(param))
-      }
-    })
-
-    const menuItems = [
-      {label: 'delete selected keys', onClick: () => {
-        timeline.removeSelectedKeys()
-      }}
-    ]
-
-    return <ContextMenu items={menuItems}>
-      <div style={{...style, position: 'relative', flex: 1}}>
-        {children}
-        <PointerLine timeline={timeline}/>
+  return (
+    <ContextMenu items={getMenuItems()}>
+      <div className={styles.container} style={style}>
+        {keylinePositions.map(({ keyHolder, top, height }) => (
+          <div key={keyHolder.uid} className={styles.keylineWrapper}>
+            <Keyline
+              keyHolder={keyHolder}
+              top={top}
+              height={height}
+            />
+          </div>
+        ))}
+        <div className={styles.pointerLineContainer}>
+          <PointerLine timeline={timeline} />
+        </div>
       </div>
     </ContextMenu>
-  }
-}
+  );
+};
+
+Keylines.propTypes = {
+  style: PropTypes.object,
+};
+
+export default memo(Keylines);

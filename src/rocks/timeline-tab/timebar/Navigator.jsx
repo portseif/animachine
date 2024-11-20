@@ -1,137 +1,109 @@
-import React, {PropTypes} from 'react'
-import {afflatus} from 'afflatus'
-import customDrag from 'custom-drag'
-import {getTheme} from 'react-matterkit'
+import React, { useState, useCallback, memo } from 'react';
+import PropTypes from 'prop-types';
+import { useDrag } from 'react-dnd';
+import { getTheme } from 'react-matterkit';
+import styles from './Navigator.module.css';
 
-const getDragArgs = (dragMode) => {
-  const options = {
-    onDown(props, monitor) {
-      const {start, pxpms, visibleTime} = props.timeline
-      monitor.setData({start, visibleTime, pxpms})
+const useNavigatorDrag = (dragMode, timeline, onDrag) => {
+  return useDrag({
+    type: `NAVIGATOR_${dragMode.toUpperCase()}`,
+    item: { type: `NAVIGATOR_${dragMode.toUpperCase()}`, timeline },
+    collect: monitor => ({
+      isDragging: monitor.isDragging(),
+    }),
+    begin: (monitor) => {
+      const { start, visibleTime, pxpms } = timeline;
+      return { start, visibleTime, pxpms };
     },
-    onDrag(props, monitor) {
-      const {timeline, actions} = props
-      const {x: xInit} = monitor.getInitialClientOffset()
-      const {x: xNow} = monitor.getClientOffset()
-      const scale = timeline.width / timeline.length
-      const move = (xNow - xInit) / scale
-      const initial = monitor.data
-      const start = initial.start - move
+    drag: (item, monitor) => {
+      const { x: xInit } = monitor.getInitialClientOffset();
+      const { x: xNow } = monitor.getClientOffset();
+      const scale = timeline.width / timeline.length;
+      const move = (xNow - xInit) / scale;
+      const initial = monitor.getItem();
 
-      if (dragMode === 'move') {
-        timeline.start = start
-      }
-      else if (dragMode === 'start') {
-        let visibleTime = initial.visibleTime - move
-
-        timeline.start = start
-        timeline.pxpms = timeline.width / visibleTime
-      }
-      else if (dragMode === 'end') {
-        const {currentTime, pxpms} = timeline
-        let visibleTime = initial.visibleTime + move
-        timeline.pxpms = timeline.width / visibleTime
-
-        let mdPos = (initial.start + currentTime) * initial.pxpms
-        timeline.start = -((currentTime * pxpms) - mdPos) / pxpms
-      }
+      onDrag(dragMode, move, initial);
     },
-    onEnter(props, monitor, component) {
-      component.setState({hover: dragMode})
-    },
-    onLeave(props, monitor, component) {
-      component.setState({hover: false})
+  });
+};
+
+const Navigator = ({ timeline }) => {
+  const [hover, setHover] = useState(false);
+  const colors = getTheme().getStyle('colors');
+
+  const handleDrag = useCallback((dragMode, move, initial) => {
+    const start = initial.start - move;
+
+    if (dragMode === 'move') {
+      timeline.start = start;
+    } else if (dragMode === 'start') {
+      const visibleTime = initial.visibleTime - move;
+      timeline.start = start;
+      timeline.pxpms = timeline.width / visibleTime;
+    } else if (dragMode === 'end') {
+      const { currentTime, pxpms } = timeline;
+      const visibleTime = initial.visibleTime + move;
+      timeline.pxpms = timeline.width / visibleTime;
+
+      const mdPos = (initial.start + currentTime) * initial.pxpms;
+      timeline.start = -((currentTime * pxpms) - mdPos) / pxpms;
     }
-  }
+  }, [timeline]);
 
-  const connect = (connect) => ({
-    [`${dragMode}Dragger`]: connect.getDragRef()
-  })
+  const [, moveDragRef] = useNavigatorDrag('move', timeline, handleDrag);
+  const [, startDragRef] = useNavigatorDrag('start', timeline, handleDrag);
+  const [, endDragRef] = useNavigatorDrag('end', timeline, handleDrag);
 
-  return [options, connect]
-}
+  const { start, length, width, startMargin } = timeline;
+  const scale = width / length;
 
-@customDrag(...getDragArgs('move'))
-@customDrag(...getDragArgs('start'))
-@customDrag(...getDragArgs('end'))
-@afflatus
-export default class Pointer extends React.Component {
-  // static propTypes = {
-  //   timeline: PropTypes.shape({
-  //     start: PropTypes.number,
-  //     pxpms: PropTypes.number,
-  //     width: PropTypes.number,
-  //     lenght: PropTypes.number,
-  //     startMargin: PropTypes.number,
-  //   })
-  // }
-  // shouldComponentUpdate(next) {
-  //   const {props} = this
-  //   return (
-  //     props.timeline.start !== next.timeline.start ||
-  //     props.timeline.pxpms !== next.timeline.pxpms ||
-  //     props.timeline.width !== next.timeline.width ||
-  //     props.timeline.length !== next.timeline.length ||
-  //     props.timeline.startMargin !== next.timeline.startMargin
-  //   )
-  // }
-  constructor(props) {
-    super(props)
-    this.state = {
-      hover: false
-    }
-  }
+  const containerStyle = {
+    left: `${(-start * scale) + startMargin}px`,
+    width: `${timeline.visibleTime * scale}px`,
+    transform: `scaleY(${hover ? 1 : 0.56})`,
+    backgroundColor: hover ? colors.grey2 : colors.grey3,
+  };
 
-  renderHandler(side, ref) {
-    const colors = getTheme(this).getStyle('colors')
-    const style = {
-      position: 'absolute',
-      [side === 'start' ? 'left' : 'right']: '0px',
-      top: '0px',
-      height: '100%',
-      width: '8%',
-      minWidth: '1px',
-      maxWidth: '7px',
-      cursor: 'ew-resize',
-      backgroundColor: this.state.hover === side ? colors.blue : 'transparent'
-    }
+  const pointerStyle = {
+    backgroundColor: hover === 'move' ? colors.blue : 'transparent',
+  };
 
-    return <div ref={ref} style={style}/>
-  }
+  const renderHandler = (side, ref) => (
+    <div
+      ref={ref}
+      className={side === 'start' ? styles.handlerStart : styles.handlerEnd}
+      style={{
+        backgroundColor: hover === side ? colors.blue : 'transparent',
+      }}
+      onMouseEnter={() => setHover(side)}
+      onMouseLeave={() => setHover(false)}
+    />
+  );
 
-  render() {
-    const {timeline, startDragger, endDragger, moveDragger} = this.props
-    const colors = getTheme(this).getStyle('colors')
-    const {hover} = this.state
-    const {start, length, width, startMargin} = timeline
-    const scale = width / length
-    const styleContainer = {
-      left: ((-start * scale) + startMargin) + 'px',
-      width: (timeline.visibleTime * scale) + 'px',
-      position: 'absolute',
-      top: '0px',
-      height: '7px',
-      cursor: 'move',
-      transformOrigin: 'center top',
-      transform: `scaleY(${hover ? 1 : 0.56})`,
-      backgroundColor: hover ? colors.grey2 : colors.grey3,
-    }
-    const stylePointer = {
-      position: 'absolute',
-      top: '0px',
-      left: '0px',
-      width: '100%',
-      height: '100%',
-      transformOrigin: 'center top',
-      backgroundColor: hover === 'move' ? colors.blue : 'transparent'
-    }
+  return (
+    <div
+      className={styles.container}
+      style={containerStyle}
+      onMouseEnter={() => setHover('move')}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div ref={moveDragRef} className={styles.pointer} style={pointerStyle} />
+      {renderHandler('start', startDragRef)}
+      {renderHandler('end', endDragRef)}
+    </div>
+  );
+};
 
-    return (
-      <div style={styleContainer}>
-        <div ref={moveDragger} style={stylePointer}/>
-        {this.renderHandler('start', startDragger)}
-        {this.renderHandler('end', endDragger)}
-      </div>
-    )
-  }
-}
+Navigator.propTypes = {
+  timeline: PropTypes.shape({
+    start: PropTypes.number.isRequired,
+    pxpms: PropTypes.number.isRequired,
+    width: PropTypes.number.isRequired,
+    length: PropTypes.number.isRequired,
+    startMargin: PropTypes.number.isRequired,
+    visibleTime: PropTypes.number.isRequired,
+    currentTime: PropTypes.number.isRequired,
+  }).isRequired,
+};
+
+export default memo(Navigator);

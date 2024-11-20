@@ -1,0 +1,13 @@
+.container {
+  pointer-events: none;
+  position: absolute;
+  bottom: 0;
+  transform-origin: center bottom;
+}
+
+.pointer {
+  position: absolute;
+  box-sizing: border-box;
+  border: solid #FF4136 1px;
+  transition: transform 0.1s ease-out;
+}
